@@ -5,38 +5,17 @@ import pandas as pd
 import math
 import operator
 import matplotlib.pyplot as plt
+import time
 
-def dist2city(cities):
-    data = {}
 
-    for idx in range(len(cities)):
-        x1 = cities[idx][0]
-        y1 = cities[idx][1]
-        if idx + 1 <= len(cities)-1:
-            x2 = cities[idx+1][0]
-            y2 = cities[idx+1][1]
-            dst = ( (x2-x1)**2 + (y2-y1)**2 )**.5
-            data['Distance from city '+ str(idx+1) +' to city ' + str(idx+2)] = dst 
-        elif idx + 1 > len(cities)-1:
-            x2 = cities[0][0]
-            y2 = cities[0][1]
-            dst = ( (x2-x1)**2 + (y2-y1)**2 )**.5
-            data['Distance from city '+ str(idx+1) + ' to city ' + str(idx +2 -len(cities))] = dst
-              
-    return data
-
-def total_distance(cities):
-    distance = dist2city(cities)
-    return sum(distance.values())
-
-def init_population(cities, size):
+def random_init_population(cities, size):
     """
         Initalize population
         :Input:
             - cities: a list
             - size:   contains solutions
         :Output:
-            Return: size of solutions
+            Return: size of solutions which contain all coords
     """
     return [random.sample(cities, len(cities)) for i in range(size)]
 
@@ -97,28 +76,24 @@ def selection2population(population, selected_values):
 def crossover(father, mother):
     """Run the crossover step if needed, otherwise return a copy of
         the father"""
-    #if random.random() <= rate:
+
     crossover_index = random.randint(0, len(father) - 1)
 
     start_father = father[:crossover_index]
     end_father = father[crossover_index:]
-    
+
     start_mother = mother[:crossover_index]
     end_mother = mother[crossover_index:]
 
     child = start_father + end_mother
     #print("\nChild: ",child)
-    
+
     intersection = list(set(end_father) & set(start_mother))
-    #ssprint('Orphans: ',intersection)
+
 
     dups = []
 
     for i in range(len(child)):
-        """
-            Neu child[i] da co trong duplicate, thi ta gan intersection[-1]
-                child[i] = intersection.pop() (lay phan tu cuoi cung ra khoi danh sach)
-        """
         if child[i] in dups:
             #print("Child nam trong dups: ", child[i])
             try:
@@ -126,16 +101,14 @@ def crossover(father, mother):
             except:
                 print(child[i])
         else:
-            #print('Child khong nam trong DUPS: ', child[i])
             dups.append(child[i])
 
-    #print("\n\nDUPS la: ", dups)
     return child
 
 def off_spring_population(mate, elite_size):
     """
         :Create the offspring population
-        
+
         :Input:
             - mate: selection2population
             - elite_size: keep the best solution found, and used to build next generation
@@ -151,13 +124,13 @@ def off_spring_population(mate, elite_size):
         child = crossover(mate[i], sample[len(mate)-i-1])
         children.append(child)
         #print("Child ", child)
-    
+
     return children
 
 def muate(child, mutation_rate):
     """
         :Mutate the child according to the mutation_rate
-            mutation_rate: probability of mutation, float between 0 and 1      
+            mutation_rate: probability of mutation, float between 0 and 1
     """
     n = len(child)
     for i in range(n):
@@ -170,7 +143,7 @@ def muate(child, mutation_rate):
             #print("Index: ", index)
             child[i], child[index] = child[index], child[i]
             #print("\nSwap: ", (child[i], child[index]))
-    
+
     return child
 
 def next_generations(current_gene, elite_size, mutate_rate):
@@ -185,53 +158,63 @@ def next_generations(current_gene, elite_size, mutate_rate):
     return new_generation
 
 
-#def get_cities(result, cities)
-
 def GA(citites,fname,population_size = 10, elite_size = 20, mutate_rate = 1e-3, iterations = 500):
+    start = time.time()
     #initialize population
-    population = init_population(cities, population_size)
+    population = random_init_population(cities, population_size)
+
     progress = []
     progress.append(1 / rank_route(population)[0][1])
     for i in range(iterations):
         population = next_generations(population, elite_size, mutate_rate)
+        #print('population: ', population)
+        #break
         progress.append(1 / rank_route(population)[0][1])
         if i % 100 == 0:
             print("Iteration: %d"%i)
             #print(population)
-    
-    print("Initial distance: ",progress[0])
-    print("Final distance: " ,progress[-1])
-    
-    index_best_route = rank_route(population)[0][0] 
+
+    #print("Initial weight: ",progress[0])
+    #print("Final weight: " ,progress[-1])
+
+    index_best_route = rank_route(population)[0][0]
     best_route = population[index_best_route]
-    
+    delta_time = time.time() - start
+
+    cost = total_distance(best_route)
+    print("--- %s seconds ---" % delta_time)
+    print("Final distance: ", cost)
+
     fig = plt.figure(figsize=(8, 6))
     plt.plot(progress)
     plt.ylabel('Distance')
     plt.xlabel('Generations')
-    fig.savefig(fname, bbox_inches = 'tight', dpi=300)
+    fig.savefig(fname + '.png', bbox_inches = 'tight', dpi=300)
 
     plt.show()
-    return (best_route, index_best_route)
+    return (best_route, index_best_route, cost, delta_time)
 
 if __name__ == "__main__":
     PATH = './img/'
-    fname = 'mini' + '.png'
+    fname = 'gen_test_194'
 
-    population_size = 3000
+    population_size = 300
     mutate_rate = 0.001
-    elite_size = 50
-    iterations = 350
-    
-    data = read_file('./datasets/minimal.tsp')
+    elite_size = 70
+    iterations = 200
+
+    data = read_file('./datasets/qatar194.tsp')
 
     #get x, y into a tuple-list [(0,1), (0,2), (1,2)...]
     cities = [(x, y) for x, y in zip(data['x'], data['y'])]
     #x,y = get_coords(cities)
     #plot_maps(x,y, './maps/'+ fname)
-    
-    result, index = GA(cities,PATH + 'coverage_' + fname, population_size, elite_size,mutate_rate, iterations)
+
+    result, index, cost, delta_time = GA(cities,PATH + 'coverage/' + fname, population_size, elite_size,mutate_rate, iterations)
+
+    with open('./outputs/genetic/' + fname + '300300.output', 'a') as f:
+        f.write('\nCOST: %f' %cost)
+        f.write('\nTIME EXECUTION: %f' %delta_time)
+        f.write('\n\n=========================================\n\n')
 
     plot_pop(result,PATH+fname)
-
-   

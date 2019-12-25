@@ -15,7 +15,7 @@ def read_file(fname):
     """
 
     with open(fname) as f:
-        
+
         lines = f.readlines()
 
         i = 0
@@ -61,7 +61,7 @@ def get_coords(cities):
     cities = np.array(cities)
     y = cities[:,0]
     x = cities[:,1]
-                
+
     return x,y
 
 def build_graph(data):
@@ -76,9 +76,31 @@ def build_graph(data):
 
     return graph
 
+def dist2city(cities):
+    data = {}
+
+    for idx in range(len(cities)):
+        x1 = cities[idx][0]
+        y1 = cities[idx][1]
+        if idx + 1 <= len(cities)-1:
+            x2 = cities[idx+1][0]
+            y2 = cities[idx+1][1]
+            dst = ( (x2-x1)**2 + (y2-y1)**2 )**.5
+            data['Distance from city '+ str(idx+1) +' to city ' + str(idx+2)] = dst
+        elif idx + 1 > len(cities)-1:
+            x2 = cities[0][0]
+            y2 = cities[0][1]
+            dst = ( (x2-x1)**2 + (y2-y1)**2 )**.5
+            data['Distance from city '+ str(idx+1) + ' to city ' + str(idx +2 -len(cities))] = dst
+
+    return data
+
+def total_distance(cities):
+    distance = dist2city(cities)
+    return sum(distance.values())
 
 def plot_pop(cities, fname):
-    
+
     fig = plt.figure(figsize=(6,8))
     x = [i[0] for i in cities]
     y = [i[1] for i in cities]
